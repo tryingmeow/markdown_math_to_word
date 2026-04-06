@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
-import MathToImage from './MathToImage'
+import rehypeKatex from 'rehype-katex'
+import { normalizeLatexDelimiters } from './normalizeLatexDelimiters'
 import 'katex/dist/katex.min.css'
 import 'highlight.js/styles/github.css'
 import './App.css'
@@ -69,150 +70,18 @@ function fibonacci(n) {
 
 *开始编辑吧！*`
 
-function App() {
-  const [markdown, setMarkdown] = useState(defaultMarkdown)
-  const previewRef = useRef<HTMLDivElement>(null)
-
-  const handleCopy = async () => {
-    if (previewRef.current) {
-      try {
-        // 等待所有数学公式图片生成完成
-        const mathImages = previewRef.current.querySelectorAll('.math-image')
-        if (mathImages.length > 0) {
-          // 检查是否有图片还在加载中
-          const loadingImages = Array.from(mathImages)
-            .filter((img): img is HTMLImageElement => img instanceof HTMLImageElement)
-            .filter(img =>
-              !img.src.startsWith('data:image') ||
-              img.naturalWidth === 0
-            )
-
-          if (loadingImages.length > 0) {
-            alert('正在生成数学公式图片，请稍后再试...')
-            return
-          }
-        }
-
-        // 1. 克隆预览节点以进行无损操作
-        const clonedPreview = previewRef.current.cloneNode(true) as HTMLDivElement
-
-        // 2. 遍历代码块，从原始DOM计算样式并应用到克隆DOM，同时修复换行
-        const originalPres = previewRef.current.querySelectorAll('pre')
-        const clonedPres = clonedPreview.querySelectorAll('pre')
-
-        originalPres.forEach((originalPre, index) => {
-          const clonedPre = clonedPres[index]
-          if (!clonedPre) return
-
-          // --- Step A: 内联 <pre> 容器的样式 ---
-          const preStyle = window.getComputedStyle(originalPre)
-          clonedPre.style.backgroundColor = preStyle.backgroundColor
-          clonedPre.style.padding = '12px 16px' // 使用固定值避免计算差异
-          clonedPre.style.margin = '16px 0'
-          clonedPre.style.border = '1px solid #e9ecef'
-          clonedPre.style.borderRadius = '6px'
-          clonedPre.style.fontFamily = "Consolas, 'Courier New', Monaco, monospace"
-          clonedPre.style.fontSize = '14px'
-          clonedPre.style.lineHeight = '1.5'
-          clonedPre.style.whiteSpace = 'pre-wrap' // 确保长代码在Word中能换行
-          clonedPre.style.wordWrap = 'break-word'
-          clonedPre.style.overflowX = 'auto'
-
-          // --- Step B: 内联代码高亮 (<span>) 的颜色 ---
-          const originalSpans = originalPre.querySelectorAll('span[class^="hljs-"]')
-          const clonedSpans = clonedPre.querySelectorAll('span[class^="hljs-"]')
-
-          originalSpans.forEach((originalSpan, spanIndex) => {
-            const clonedSpan = clonedSpans[spanIndex] as HTMLElement
-            if (clonedSpan) {
-              const spanStyle = window.getComputedStyle(originalSpan)
-              clonedSpan.style.color = spanStyle.color
-              clonedSpan.removeAttribute('class') // 清理class，避免Word样式冲突
-            }
-          })
-
-          // --- Step C: 修复Word中的换行问题 ---
-          const codeElement = clonedPre.querySelector('code')
-          if (codeElement) {
-            // 将换行符 \n 替换为 <br> 标签
-            codeElement.innerHTML = codeElement.innerHTML.replace(/\n/g, '<br>')
-          }
-        })
-
-        // 获取处理后的HTML内容
-        let htmlContent = clonedPreview.innerHTML
-
-        // 为整个内容添加Word兼容的基础样式
-        htmlContent = `<div style="
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-          font-size: 16px;
-          line-height: 1.6;
-          color: #1f2937;
-          max-width: none;
-          margin: 0;
-          padding: 0;
-          background-color: #ffffff;
-          word-wrap: break-word;
-          mso-line-height-rule: exactly;
-          mso-text-raise: 0;
-        ">${htmlContent}</div>`
-
-        // 旧的清理代码块的逻辑现在可以被移除或注释掉
-        /*
-        // 处理语法高亮的代码块 - 彻底清理并重新格式化
-        // 首先清理所有语法高亮的span标签，只保留纯文本
-        htmlContent = htmlContent.replace(
-          /<pre([^>]*)><code([^>]*)>([\s\S]*?)<\/code><\/pre>/g,
-          (_, preAttrs, __, content) => {
-            // 提取纯文本内容，移除所有HTML标签
-            const cleanText = content
-              .replace(/<[^>]*>/g, '') // 移除所有HTML标签
-              .replace(/&lt;/g, '<')   // 解码HTML实体
-              .replace(/&gt;/g, '>')
-              .replace(/&amp;/g, '&')
-              .replace(/&quot;/g, '"')
-              .replace(/&#x27;/g, "'")
-              .trim()
-            
-            // 返回清理后的代码块，使用我们自定义的样式
-            return `<pre${preAttrs} style="` +
-              'background-color: #f8f9fa; ' +
-              'border: 2px solid #e9ecef; ' +
-              'border-radius: 6px; ' +
-              'padding: 12px 16px; ' +
-              'margin: 16px 0; ' +
-              'font-family: Consolas, \'Courier New\', Monaco, monospace; ' +
-              'font-size: 12px; ' +
-              'font-weight: normal; ' +
-              'line-height: 1.5; ' +
-              'color: #212529; ' +
-              'page-break-inside: avoid; ' +
-              'word-wrap: break-word; ' +
-              'white-space: pre-wrap; ' +
-              'display: block; ' +
-              'clear: both; ' +
-              'overflow-x: auto; ' +
-              'tab-size: 4; ' +
-              'mso-element: para; ' +
-              'mso-margin-top-alt: auto; ' +
-              'mso-margin-bottom-alt: auto;' +
-              '"><code style="' +
-              'font-family: inherit; ' +
-              'font-size: inherit; ' +
-              'color: inherit; ' +
-              'background: transparent; ' +
-              'padding: 0; ' +
-              'margin: 0; ' +
-              'border: none;' +
-              '">' + cleanText + '</code></pre>'
-          }
-        )
-        */
-
-        // 处理剩余的行内代码 <code> 标签（代码块已经处理完毕）
-        htmlContent = htmlContent.replace(
-          /<code([^>]*)>/g,
-          '<code$1 style="' +
+/**
+ * 仅给「行内 code」加样式。若对 pre>code 也加 white-space:nowrap，Word 会把整段代码挤成一行，
+ * 版面右侧像被「截断」或只显示一截。
+ */
+function applyInlineCodeStylesForWord(htmlContent: string): string {
+  const parts = htmlContent.split(/(<pre\b[\s\S]*?<\/pre>)/gi)
+  return parts
+    .map((segment) => {
+      if (/^<pre\b/i.test(segment)) return segment
+      return segment.replace(
+        /<code([^>]*)>/g,
+        '<code$1 style="' +
           'background-color: #f1f3f4; ' +
           'color: #c7254e; ' +
           'padding: 2px 6px; ' +
@@ -223,94 +92,215 @@ function App() {
           'border: 1px solid #d1d5db; ' +
           'border-radius: 3px; ' +
           'word-wrap: break-word; ' +
-          'white-space: nowrap; ' +
+          'white-space: normal; ' +
           'vertical-align: baseline; ' +
           'mso-element: span;' +
           '">'
-        )
+      )
+    })
+    .join('')
+}
 
-        // 为表格添加Word兼容的样式
-        htmlContent = htmlContent.replace(
-          /<table([^>]*)>/g,
-          '<table$1 style="' +
-          'border-collapse: collapse; ' +
-          'width: 100%; ' +
-          'margin: 16px 0; ' +
-          'font-size: 14px; ' +
-          'mso-table-lspace: 0pt; ' +
-          'mso-table-rspace: 0pt; ' +
-          'mso-table-anchor-vertical: paragraph; ' +
-          'mso-table-anchor-horizontal: margin;' +
-          '">'
-        )
+function App() {
+  const [markdown, setMarkdown] = useState(defaultMarkdown)
+  const previewRef = useRef<HTMLDivElement>(null)
+  const markdownForPreview = useMemo(
+    () => normalizeLatexDelimiters(markdown),
+    [markdown]
+  )
 
-        // 为表头单元格添加样式
-        htmlContent = htmlContent.replace(
-          /<th([^>]*)>/g,
-          '<th$1 style="' +
-          'border: 1px solid #d0d7de; ' +
-          'padding: 8px 12px; ' +
-          'background-color: #f6f8fa; ' +
-          'font-weight: 600; ' +
-          'text-align: left; ' +
-          'vertical-align: top; ' +
-          'mso-element: th;' +
-          '">'
-        )
+  const generateWordData = async () => {
+    if (!previewRef.current) return null
 
-        // 为表格单元格添加样式
-        htmlContent = htmlContent.replace(
-          /<td([^>]*)>/g,
-          '<td$1 style="' +
-          'border: 1px solid #d0d7de; ' +
-          'padding: 8px 12px; ' +
-          'vertical-align: top; ' +
-          'mso-element: td;' +
-          '">'
-        )
+    // 1. 克隆预览节点以进行无损操作
+    const clonedPreview = previewRef.current.cloneNode(true) as HTMLDivElement
 
-        // 为引用块添加样式
-        htmlContent = htmlContent.replace(
-          /<blockquote([^>]*)>/g,
-          '<blockquote$1 style="' +
-          'margin: 16px 0; ' +
-          'padding: 0 16px; ' +
-          'border-left: 4px solid #d1d5db; ' +
-          'background-color: #f9fafb; ' +
-          'font-style: italic; ' +
-          'color: #6b7280; ' +
-          'page-break-inside: avoid;' +
-          '">'
-        )
+    // 2. 将 KaTeX 公式转换为 Word 原生支持的 MathML
+    const katexDisplays = clonedPreview.querySelectorAll('.katex-display')
+    katexDisplays.forEach(displayEl => {
+      const mathmlNode = displayEl.querySelector('.katex-mathml math')
+      if (mathmlNode) {
+        mathmlNode.setAttribute('xmlns', 'http://www.w3.org/1998/Math/MathML')
+        const p = document.createElement('p')
+        p.style.textAlign = 'center'
+        p.style.margin = '16px 0'
+        p.appendChild(mathmlNode.cloneNode(true))
+        displayEl.parentNode?.replaceChild(p, displayEl)
+      }
+    })
 
-        // 为标题添加Word兼容的样式
-        for (let i = 1; i <= 6; i++) {
-          const fontSize = Math.max(24 - i * 2, 14) // h1=22px, h2=20px, ..., h6=14px
-          htmlContent = htmlContent.replace(
-            new RegExp(`<h${i}([^>]*)>`, 'g'),
-            `<h${i}$1 style="` +
-            `font-size: ${fontSize}px; ` +
-            `font-weight: bold; ` +
-            `margin: ${i === 1 ? '24px' : '20px'} 0 16px 0; ` +
-            `color: #1f2937; ` +
-            `line-height: 1.25; ` +
-            `page-break-after: avoid; ` +
-            `mso-element: h${i};` +
-            `">`
-          )
+    const katexInlines = clonedPreview.querySelectorAll('.katex')
+    katexInlines.forEach(katexEl => {
+      if (!clonedPreview.contains(katexEl)) return // 已经被块级处理移除了
+
+      const mathmlNode = katexEl.querySelector('.katex-mathml math')
+      if (mathmlNode) {
+        mathmlNode.setAttribute('xmlns', 'http://www.w3.org/1998/Math/MathML')
+        katexEl.parentNode?.replaceChild(mathmlNode.cloneNode(true), katexEl)
+      }
+    })
+
+    // 3. 遍历代码块，从原始DOM计算样式并应用到克隆DOM，同时修复换行
+    const originalPres = previewRef.current.querySelectorAll('pre')
+    const clonedPres = clonedPreview.querySelectorAll('pre')
+
+    originalPres.forEach((originalPre, index) => {
+      const clonedPre = clonedPres[index]
+      if (!clonedPre) return
+
+      // --- Step A: 内联 <pre> 容器的样式 ---
+      const preStyle = window.getComputedStyle(originalPre)
+      clonedPre.style.backgroundColor = preStyle.backgroundColor
+      clonedPre.style.padding = '12px 16px' // 使用固定值避免计算差异
+      clonedPre.style.margin = '16px 0'
+      clonedPre.style.border = '1px solid #e9ecef'
+      clonedPre.style.borderRadius = '6px'
+      clonedPre.style.fontFamily = "Consolas, 'Courier New', Monaco, monospace"
+      clonedPre.style.fontSize = '14px'
+      clonedPre.style.lineHeight = '1.5'
+      clonedPre.style.whiteSpace = 'pre-wrap' // 确保长代码在Word中能换行
+      clonedPre.style.wordWrap = 'break-word'
+      clonedPre.style.overflowX = 'auto'
+
+      // --- Step B: 内联代码高亮 (<span>) 的颜色 ---
+      const originalSpans = originalPre.querySelectorAll('span[class^="hljs-"]')
+      const clonedSpans = clonedPre.querySelectorAll('span[class^="hljs-"]')
+
+      originalSpans.forEach((originalSpan, spanIndex) => {
+        const clonedSpan = clonedSpans[spanIndex] as HTMLElement
+        if (clonedSpan) {
+          const spanStyle = window.getComputedStyle(originalSpan)
+          clonedSpan.style.color = spanStyle.color
+          clonedSpan.removeAttribute('class') // 清理class，避免Word样式冲突
         }
+      })
 
-        // 检查是否支持现代Clipboard API
-        if (navigator.clipboard && window.ClipboardItem) {
-          // 使用现代Clipboard API
-          const blob = new Blob([htmlContent], { type: 'text/html' })
-          const data = [new ClipboardItem({ 'text/html': blob })]
+      // --- Step C: 修复Word中的换行问题 ---
+      const codeElement = clonedPre.querySelector('code')
+      if (codeElement) {
+        // 将换行符 \n 替换为 <br> 标签
+        codeElement.innerHTML = codeElement.innerHTML.replace(/\n/g, '<br>')
+      }
+    })
 
-          await navigator.clipboard.write(data)
-          alert('内容已复制到剪贴板！可以粘贴到Word等应用中。')
-        } else {
-          // 回退到传统方法
-          const range = document.createRange()
+    // 获取处理后的HTML内容
+    let htmlContent = clonedPreview.innerHTML
+
+    // 为整个内容添加Word兼容的基础样式
+    htmlContent = `<div style="
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #1f2937;
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      background-color: #ffffff;
+      word-wrap: break-word;
+      mso-line-height-rule: exactly;
+      mso-text-raise: 0;
+    ">${htmlContent}</div>`
+
+    // 处理剩余的行内代码 <code> 标签（不作用于 pre>code，避免 Word 中单行溢出「截断」）
+    htmlContent = applyInlineCodeStylesForWord(htmlContent)
+
+    // 为表格添加Word兼容的样式
+    htmlContent = htmlContent.replace(
+      /<table([^>]*)>/g,
+      '<table$1 style="' +
+      'border-collapse: collapse; ' +
+      'width: 100%; ' +
+      'margin: 16px 0; ' +
+      'font-size: 14px; ' +
+      'mso-table-lspace: 0pt; ' +
+      'mso-table-rspace: 0pt; ' +
+      'mso-table-anchor-vertical: paragraph; ' +
+      'mso-table-anchor-horizontal: margin;' +
+      '">'
+    )
+
+    // 为表头单元格添加样式
+    htmlContent = htmlContent.replace(
+      /<th([^>]*)>/g,
+      '<th$1 style="' +
+      'border: 1px solid #d0d7de; ' +
+      'padding: 8px 12px; ' +
+      'background-color: #f6f8fa; ' +
+      'font-weight: 600; ' +
+      'text-align: left; ' +
+      'vertical-align: top; ' +
+      'mso-element: th;' +
+      '">'
+    )
+
+    // 为表格单元格添加样式
+    htmlContent = htmlContent.replace(
+      /<td([^>]*)>/g,
+      '<td$1 style="' +
+      'border: 1px solid #d0d7de; ' +
+      'padding: 8px 12px; ' +
+      'vertical-align: top; ' +
+      'mso-element: td;' +
+      '">'
+    )
+
+    // 为引用块添加样式
+    htmlContent = htmlContent.replace(
+      /<blockquote([^>]*)>/g,
+      '<blockquote$1 style="' +
+      'margin: 16px 0; ' +
+      'padding: 0 16px; ' +
+      'border-left: 4px solid #d1d5db; ' +
+      'background-color: #f9fafb; ' +
+      'font-style: italic; ' +
+      'color: #6b7280; ' +
+      'page-break-inside: avoid;' +
+      '">'
+    )
+
+    // 为标题添加Word兼容的样式
+    for (let i = 1; i <= 6; i++) {
+      const fontSize = Math.max(24 - i * 2, 14) // h1=22px, h2=20px, ..., h6=14px
+      htmlContent = htmlContent.replace(
+        new RegExp(`<h${i}([^>]*)>`, 'g'),
+        `<h${i}$1 style="` +
+        `font-size: ${fontSize}px; ` +
+        `font-weight: bold; ` +
+        `margin: ${i === 1 ? '24px' : '20px'} 0 16px 0; ` +
+        `color: #1f2937; ` +
+        `line-height: 1.25; ` +
+        `page-break-after: avoid; ` +
+        `mso-element: h${i};` +
+        `">`
+      )
+    }
+
+    const plainText = previewRef.current.innerText ?? ''
+    return { htmlContent, plainText }
+  }
+
+  const handleCopy = async () => {
+    try {
+      const data = await generateWordData()
+      if (!data) return
+      const { htmlContent, plainText } = data
+
+      if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+        const htmlBlob = new Blob([htmlContent], { type: 'text/html' })
+        const textBlob = new Blob([plainText], { type: 'text/plain' })
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              'text/html': htmlBlob,
+              'text/plain': textBlob,
+            }),
+          ])
+        } catch {
+          await navigator.clipboard.write([new ClipboardItem({ 'text/html': htmlBlob })])
+        }
+      } else {
+        const range = document.createRange()
+        if (previewRef.current) {
           range.selectNode(previewRef.current)
           const selection = window.getSelection()
 
@@ -318,34 +308,77 @@ function App() {
             selection.removeAllRanges()
             selection.addRange(range)
 
-            // 使用传统方法
             const success = document.execCommand('copy')
             selection.removeAllRanges()
 
-            if (success) {
-              alert('内容已复制到剪贴板！可以粘贴到Word等应用中。')
-            } else {
+            if (!success) {
               throw new Error('传统复制方法失败')
             }
           }
         }
-      } catch (err) {
-        console.error('复制失败:', err)
+      }
+    } catch (err) {
+      console.error('复制失败:', err)
 
-        // 提供手动复制的指导
-        alert('自动复制失败。请手动选择右侧预览区域的内容（Ctrl+A），然后复制（Ctrl+C）到Word中。')
-
-        // 自动选择内容供用户手动复制
-        if (previewRef.current) {
-          const range = document.createRange()
-          range.selectNodeContents(previewRef.current)
-          const selection = window.getSelection()
-          if (selection) {
-            selection.removeAllRanges()
-            selection.addRange(range)
-          }
+      // 自动选择内容供用户手动复制
+      if (previewRef.current) {
+        const range = document.createRange()
+        range.selectNodeContents(previewRef.current)
+        const selection = window.getSelection()
+        if (selection) {
+          selection.removeAllRanges()
+          selection.addRange(range)
         }
       }
+    }
+  }
+
+  const handleExportWord = async () => {
+    try {
+      const data = await generateWordData()
+      if (!data) return
+      const { htmlContent } = data
+
+      // 包装成 Word 兼容的 HTML 结构，包含页面设置
+      const wordHtml = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <meta charset='utf-8'>
+          <title>Export</title>
+          <style>
+            @page WordSection1 {
+              size: 21.0cm 29.7cm;
+              margin: 2.54cm 2.0cm 2.54cm 2.0cm;
+              mso-header-margin: 1.5cm;
+              mso-footer-margin: 1.5cm;
+              mso-paper-source: 0;
+            }
+            div.WordSection1 { page: WordSection1; }
+            /* 确保图片和代码块不被截断 */
+            img { max-width: 100%; height: auto; }
+            pre { white-space: pre-wrap !important; word-wrap: break-word !important; word-break: break-all !important; }
+          </style>
+        </head>
+        <body>
+          <div class="WordSection1">
+            ${htmlContent}
+          </div>
+        </body>
+        </html>
+      `
+
+      const blob = new Blob([wordHtml], { type: 'application/msword;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'markdown_export.doc'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('导出 Word 失败:', err)
+      alert('导出 Word 失败，请重试。')
     }
   }
 
@@ -377,9 +410,14 @@ function App() {
         <div className="preview-panel">
           <div className="panel-header">
             <h3>👁️ 实时预览</h3>
-            <button onClick={handleCopy} className="copy-button">
-              📋 复制内容
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={handleCopy} className="copy-button">
+                📋 复制内容
+              </button>
+              <button onClick={handleExportWord} className="copy-button" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+                💾 导出 Word
+              </button>
+            </div>
           </div>
           <div 
             ref={previewRef}
@@ -387,63 +425,8 @@ function App() {
           >
             <ReactMarkdown
               remarkPlugins={[remarkMath, remarkGfm]}
-              rehypePlugins={[rehypeRaw, rehypeHighlight]}
+              rehypePlugins={[rehypeRaw, rehypeKatex, rehypeHighlight]}
               components={{
-                // 处理行内数学公式 (remark-math创建的inlineMath节点)
-                span: ({ children, className, ...props }: React.HTMLProps<HTMLSpanElement>) => {
-                  // 检查是否是数学公式
-                  const classNames = className ? className.split(' ') : []
-                  if (classNames.includes('math-inline')) {
-                    const mathContent = typeof children === 'string' ? children : String(children)
-                    return <MathToImage math={mathContent} displayMode={false} parentFontSize="16px" />
-                  }
-                  return <span className={className} {...props}>{children}</span>
-                },
-                
-                // 处理块级数学公式 (remark-math创建的math节点)
-                div: ({ children, className, ...props }: React.HTMLProps<HTMLDivElement>) => {
-                  // 检查是否是块级数学公式
-                  const classNames = className ? className.split(' ') : []
-                  if (classNames.includes('math-display')) {
-                    const mathContent = typeof children === 'string' ? children : String(children)
-                    return <MathToImage math={mathContent} displayMode={true} parentFontSize="16px" />
-                  }
-                  return <div className={className} {...props}>{children}</div>
-                },
-
-                // 数学公式处理已经通过span和div组件完成
-
-                // 处理被误识别为代码的数学公式
-                code: ({ children, className, ...props }: React.HTMLProps<HTMLElement>) => {
-                  const classNames = className ? className.split(' ') : []
-                  const codeText = String(children).replace(/\n$/, '')
-                  
-                  // 检查是否是数学代码
-                  if (classNames.includes('language-math')) {
-                    if (classNames.includes('math-inline')) {
-                      return <MathToImage math={codeText} displayMode={false} parentFontSize="16px" />
-                    }
-                    if (classNames.includes('math-display')) {
-                      return <MathToImage math={codeText} displayMode={true} parentFontSize="16px" />
-                    }
-                  }
-                  
-                  // 正常的代码渲染
-                  return <code className={className} {...props}>{children}</code>
-                },
-
-                // 处理被误识别为pre>code的数学公式
-                pre: ({ children, ...props }: React.HTMLProps<HTMLPreElement>) => {
-                  // 检查子元素是否是数学代码
-                  if (React.isValidElement(children) && (children.props as any)?.className?.includes('language-math')) {
-                    const mathContent = String((children.props as any).children).replace(/\n$/, '')
-                    return <MathToImage math={mathContent} displayMode={true} parentFontSize="16px" />
-                  }
-                  
-                  // 正常的代码块渲染
-                  return <pre {...props}>{children}</pre>
-                },
-
                 // 自定义组件渲染
                 img: ({ src, alt, ...props }) => (
                   <img 
@@ -483,7 +466,7 @@ function App() {
                 ),
               }}
             >
-              {markdown}
+              {markdownForPreview}
             </ReactMarkdown>
           </div>
         </div>

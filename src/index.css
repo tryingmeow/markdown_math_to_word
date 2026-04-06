@@ -6,7 +6,7 @@
 
   color-scheme: light;
   color: #333;
-  background-color: #f8f9fa;
+  background-color: #f1f5f9;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -52,6 +52,6 @@ body {
 
 /* 代码高亮主题微调 */
 .hljs {
-  background: #f8f9fa !important;
+  background: #f1f5f9 !important;
   color: #333 !important;
 }
