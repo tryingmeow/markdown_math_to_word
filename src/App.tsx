@@ -5,6 +5,7 @@ import remarkMath from 'remark-math'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import rehypeKatex from 'rehype-katex'
+import { asBlob } from 'html-docx-js-typescript'
 import { normalizeLatexDelimiters } from './normalizeLatexDelimiters'
 import 'katex/dist/katex.min.css'
 import 'highlight.js/styles/github.css'
@@ -367,11 +368,16 @@ function App() {
         </html>
       `
 
-      const blob = new Blob([wordHtml], { type: 'application/msword;charset=utf-8' })
-      const url = URL.createObjectURL(blob)
+      // 使用 html-docx-js-typescript 生成真正的 .docx (OOXML) 文件
+      const docxBlob = (await asBlob(wordHtml, {
+        orientation: 'portrait',
+        margins: { top: 1440, right: 1134, bottom: 1440, left: 1134 },
+      })) as Blob
+
+      const url = URL.createObjectURL(docxBlob)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'markdown_export.doc'
+      link.download = 'markdown_export.docx'
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

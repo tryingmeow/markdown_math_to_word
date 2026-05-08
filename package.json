@@ -13,6 +13,7 @@
     "@types/html2canvas": "^0.5.35",
     "@types/katex": "^0.16.7",
     "highlight.js": "^11.11.1",
+    "html-docx-js-typescript": "^0.1.5",
     "html2canvas": "^1.4.1",
     "katex": "^0.16.22",
     "react": "^19.1.1",
