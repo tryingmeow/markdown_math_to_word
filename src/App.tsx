@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
+import remarkBreaks from 'remark-breaks'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import rehypeKatex from 'rehype-katex'
@@ -430,7 +431,7 @@ function App() {
             className="preview"
           >
             <ReactMarkdown
-              remarkPlugins={[remarkMath, remarkGfm]}
+              remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
               rehypePlugins={[rehypeRaw, rehypeKatex, rehypeHighlight]}
               components={{
                 // 自定义组件渲染
