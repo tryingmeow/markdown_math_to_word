@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: '/md-to-word/',
   server: {
     host: '127.0.0.1', // Force IPv4
     port: 5173
@@ -13,20 +14,9 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        // 手动分块优化
-        manualChunks: {
-          // React相关库
-          'react-vendor': ['react', 'react-dom'],
-          // Markdown处理库
-          'markdown-vendor': ['react-markdown', 'remark-gfm', 'remark-math'],
-          // 数学公式库
-          'math-vendor': ['katex', 'rehype-katex'],
-          // 代码高亮库
-          'highlight-vendor': ['rehype-highlight', 'highlight.js'],
-          // 图片处理库
-          'image-vendor': ['html2canvas']
-        },
-        // 优化chunk命名
+        // 不使用 manualChunks 按包名硬拆：katex/rehype-katex 等与 remark 链
+        // 易产生循环依赖或错误初始化顺序，生产环境会出现
+        // ReferenceError: Cannot access '…' before initialization（如 math-vendor 内）
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]'

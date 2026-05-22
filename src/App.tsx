@@ -7,6 +7,7 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import rehypeKatex from 'rehype-katex'
 import { asBlob } from 'html-docx-js-typescript'
+import html2canvas from 'html2canvas'
 import { normalizeLatexDelimiters } from './normalizeLatexDelimiters'
 import 'katex/dist/katex.min.css'
 import 'highlight.js/styles/github.css'
@@ -101,6 +102,121 @@ function applyInlineCodeStylesForWord(htmlContent: string): string {
       )
     })
     .join('')
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+function collectDocumentStyles(): string {
+  return Array.from(document.styleSheets)
+    .map((styleSheet) => {
+      try {
+        return Array.from(styleSheet.cssRules)
+          .map((rule) => rule.cssText)
+          .join('\n')
+      } catch {
+        return ''
+      }
+    })
+    .filter(Boolean)
+    .join('\n')
+}
+
+function bytesFromBase64(base64: string): Uint8Array {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return bytes
+}
+
+function concatBytes(chunks: Uint8Array[]): Uint8Array {
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+  const result = new Uint8Array(totalLength)
+  let offset = 0
+
+  chunks.forEach((chunk) => {
+    result.set(chunk, offset)
+    offset += chunk.length
+  })
+
+  return result
+}
+
+function createPdfFromJpegs(images: Array<{ data: Uint8Array; width: number; height: number }>): Blob {
+  const encoder = new TextEncoder()
+  const pageWidth = 595.28
+  const pageHeight = 841.89
+  const margin = 36
+  const contentWidth = pageWidth - margin * 2
+  const objects: Uint8Array[] = []
+
+  const text = (value: string) => encoder.encode(value)
+  const kids = images.map((_, index) => `${3 + index * 3} 0 R`).join(' ')
+
+  objects.push(text(`<< /Type /Catalog /Pages 2 0 R >>`))
+  objects.push(text(`<< /Type /Pages /Kids [${kids}] /Count ${images.length} >>`))
+
+  images.forEach((image, index) => {
+    const pageObjectNumber = 3 + index * 3
+    const contentObjectNumber = pageObjectNumber + 1
+    const imageObjectNumber = pageObjectNumber + 2
+    const imageName = `Im${index + 1}`
+    const contentHeight = Math.min((contentWidth * image.height) / image.width, pageHeight - margin * 2)
+    const y = pageHeight - margin - contentHeight
+    const drawCommand = `q\n${contentWidth.toFixed(2)} 0 0 ${contentHeight.toFixed(2)} ${margin.toFixed(2)} ${y.toFixed(2)} cm\n/${imageName} Do\nQ\n`
+
+    objects.push(
+      text(
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /${imageName} ${imageObjectNumber} 0 R >> >> /Contents ${contentObjectNumber} 0 R >>`
+      )
+    )
+    objects.push(text(`<< /Length ${encoder.encode(drawCommand).length} >>\nstream\n${drawCommand}endstream`))
+    objects.push(
+      concatBytes([
+        text(
+          `<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.data.length} >>\nstream\n`
+        ),
+        image.data,
+        text('\nendstream'),
+      ])
+    )
+  })
+
+  const chunks: Uint8Array[] = [text('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n')]
+  const offsets: number[] = [0]
+  let length = chunks[0].length
+
+  objects.forEach((object, index) => {
+    offsets.push(length)
+    const objectHeader = text(`${index + 1} 0 obj\n`)
+    const objectFooter = text('\nendobj\n')
+    chunks.push(objectHeader, object, objectFooter)
+    length += objectHeader.length + object.length + objectFooter.length
+  })
+
+  const xrefOffset = length
+  const xrefRows = offsets
+    .map((offset, index) => (index === 0 ? '0000000000 65535 f ' : `${offset.toString().padStart(10, '0')} 00000 n `))
+    .join('\n')
+  chunks.push(
+    text(
+      `xref\n0 ${objects.length + 1}\n${xrefRows}\ntrailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`
+    )
+  )
+
+  const pdfBytes = concatBytes(chunks)
+  const pdfBuffer = pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength) as ArrayBuffer
+  return new Blob([pdfBuffer], { type: 'application/pdf' })
 }
 
 function App() {
@@ -375,17 +491,108 @@ function App() {
         margins: { top: 1440, right: 1134, bottom: 1440, left: 1134 },
       })) as Blob
 
-      const url = URL.createObjectURL(docxBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'markdown_export.docx'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
+      downloadBlob(docxBlob, 'markdown_export.docx')
     } catch (err) {
       console.error('导出 Word 失败:', err)
       alert('导出 Word 失败，请重试。')
+    }
+  }
+
+  const handleExportHtml = () => {
+    try {
+      if (!previewRef.current) return
+
+      const html = `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Markdown Export</title>
+  <style>
+${collectDocumentStyles()}
+    body {
+      margin: 0;
+      background: #f1f5f9;
+      color: #333;
+    }
+    .export-page {
+      max-width: 960px;
+      margin: 32px auto;
+      padding: 40px;
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+    }
+    @media (max-width: 768px) {
+      .export-page {
+        margin: 0;
+        padding: 24px;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="preview export-page">
+${previewRef.current.innerHTML}
+  </main>
+</body>
+</html>`
+
+      downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), 'markdown_export.html')
+    } catch (err) {
+      console.error('导出 HTML 失败:', err)
+      alert('导出 HTML 失败，请重试。')
+    }
+  }
+
+  const handleExportPdf = async () => {
+    try {
+      if (!previewRef.current) return
+
+      const source = previewRef.current
+      const captureOptions = {
+        backgroundColor: '#ffffff',
+        background: '#ffffff',
+        width: source.scrollWidth,
+        height: source.scrollHeight,
+        scale: Math.min(window.devicePixelRatio || 1, 2),
+        useCORS: true,
+        logging: false,
+        windowWidth: source.scrollWidth,
+        windowHeight: source.scrollHeight,
+      }
+      const canvas = await html2canvas(source, captureOptions)
+      const pageRatio = (841.89 - 72) / (595.28 - 72)
+      const pageCanvasHeight = Math.floor(canvas.width * pageRatio)
+      const images: Array<{ data: Uint8Array; width: number; height: number }> = []
+
+      for (let y = 0; y < canvas.height; y += pageCanvasHeight) {
+        const sliceHeight = Math.min(pageCanvasHeight, canvas.height - y)
+        const pageCanvas = document.createElement('canvas')
+        pageCanvas.width = canvas.width
+        pageCanvas.height = sliceHeight
+        const context = pageCanvas.getContext('2d')
+
+        if (!context) {
+          throw new Error('无法创建 PDF 画布')
+        }
+
+        context.fillStyle = '#ffffff'
+        context.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
+        context.drawImage(canvas, 0, y, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight)
+
+        const imageData = pageCanvas.toDataURL('image/jpeg', 0.95).split(',')[1]
+        images.push({
+          data: bytesFromBase64(imageData),
+          width: pageCanvas.width,
+          height: pageCanvas.height,
+        })
+      }
+
+      downloadBlob(createPdfFromJpegs(images), 'markdown_export.pdf')
+    } catch (err) {
+      console.error('导出 PDF 失败:', err)
+      alert('导出 PDF 失败，请重试。')
     }
   }
 
@@ -417,12 +624,18 @@ function App() {
         <div className="preview-panel">
           <div className="panel-header">
             <h3>👁️ 实时预览</h3>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="export-actions">
               <button onClick={handleCopy} className="copy-button">
                 📋 复制内容
               </button>
-              <button onClick={handleExportWord} className="copy-button" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
-                💾 导出 Word
+              <button onClick={handleExportWord} className="copy-button word-button">
+                💾 导出 DOCX
+              </button>
+              <button onClick={handleExportPdf} className="copy-button pdf-button">
+                📄 导出 PDF
+              </button>
+              <button onClick={handleExportHtml} className="copy-button html-button">
+                🌐 导出 HTML
               </button>
             </div>
           </div>

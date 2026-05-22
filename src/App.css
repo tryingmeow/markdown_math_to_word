@@ -80,6 +80,13 @@ body {
   font-size: 0.85rem;
 }
 
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* 编辑器样式 */
 .editor {
   flex: 1;
@@ -118,6 +125,18 @@ body {
 
 .copy-button:active {
   transform: translateY(0);
+}
+
+.word-button {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.pdf-button {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.html-button {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
 }
 
 /* 预览区域样式 - 模拟Word文档效果 */
