@@ -606,7 +606,10 @@ ${previewRef.current.innerHTML}
   }
 
   return (
-    <div className="app fadein">
+    <>
+      <div className="wall"></div>
+      <div className="wall-veil"></div>
+      <div className="app fadein">
       <div className="wall"></div>
       <div className="wall-veil"></div>
       
@@ -679,34 +682,12 @@ ${previewRef.current.innerHTML}
                     style={{ maxWidth: '100%', height: 'auto' }}
                   />
                 ),
-                // 表格样式优化
+                // 表格样式由 App.css 接管，移除硬编码的 inline style
                 table: ({ children, ...props }) => (
-                  <table {...props} style={{ 
-                    borderCollapse: 'collapse', 
-                    width: '100%', 
-                    marginBottom: '1rem' 
-                  }}>
-                    {children}
-                  </table>
-                ),
-                th: ({ children, ...props }) => (
-                  <th {...props} style={{ 
-                    border: '1px solid #ddd', 
-                    padding: '8px', 
-                    backgroundColor: '#f5f5f5',
-                    textAlign: 'left'
-                  }}>
-                    {children}
-                  </th>
-                ),
-                td: ({ children, ...props }) => (
-                  <td {...props} style={{ 
-                    border: '1px solid #ddd', 
-                    padding: '8px' 
-                  }}>
-                    {children}
-                  </td>
-                ),
+                  <div className="table-wrapper">
+                    <table {...props}>{children}</table>
+                  </div>
+                )
               }}
             >
               {markdownForPreview}
@@ -714,7 +695,8 @@ ${previewRef.current.innerHTML}
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
 
