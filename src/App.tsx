@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react'
+import React, { useState, useRef, useMemo, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -221,6 +221,11 @@ function createPdfFromJpegs(images: Array<{ data: Uint8Array; width: number; hei
 
 function App() {
   const [markdown, setMarkdown] = useState(defaultMarkdown)
+  const [isNight, setIsNight] = useState(false)
+
+  useEffect(() => {
+    document.documentElement.dataset.mode = isNight ? 'night' : 'day'
+  }, [isNight])
   const previewRef = useRef<HTMLDivElement>(null)
   const markdownForPreview = useMemo(
     () => normalizeLatexDelimiters(markdown),
@@ -262,7 +267,7 @@ function App() {
     const originalPres = previewRef.current.querySelectorAll('pre')
     const clonedPres = clonedPreview.querySelectorAll('pre')
 
-    originalPres.forEach((originalPre, index) => {
+    originalPres.forEach((originalPre: any, index: number) => {
       const clonedPre = clonedPres[index]
       if (!clonedPre) return
 
@@ -284,7 +289,7 @@ function App() {
       const originalSpans = originalPre.querySelectorAll('span[class^="hljs-"]')
       const clonedSpans = clonedPre.querySelectorAll('span[class^="hljs-"]')
 
-      originalSpans.forEach((originalSpan, spanIndex) => {
+      originalSpans.forEach((originalSpan: any, spanIndex: number) => {
         const clonedSpan = clonedSpans[spanIndex] as HTMLElement
         if (clonedSpan) {
           const spanStyle = window.getComputedStyle(originalSpan)
@@ -601,41 +606,59 @@ ${previewRef.current.innerHTML}
   }
 
   return (
-    <div className="app">
-      <header className="header">
-        <h1>📝 Markdown转Word工具</h1>
-        <p>实时预览 | 数学公式 | 格式丰富</p>
+    <div className="app fadein">
+      <div className="wall"></div>
+      <div className="wall-veil"></div>
+      
+      <header className="header glass-strong rise">
+        <div className="header-content">
+          <h1>📝 Markdown to Word</h1>
+          <p>Real-time Preview | LaTeX Math | Rich Formats</p>
+        </div>
+        <div 
+          className="mode-toggle" 
+          onClick={() => setIsNight(!isNight)}
+          title="Toggle Theme"
+        >
+          {isNight ? '🌙' : '☀️'}
+        </div>
       </header>
       
       <div className="container">
-        <div className="editor-panel">
+        <div className="panel editor-panel glass rise" style={{ animationDelay: '0.1s' }}>
           <div className="panel-header">
-            <h3>📝 Markdown编辑器</h3>
-            <span className="char-count">{markdown.length} 字符</span>
+            <div className="panel-title">
+              <span>📝</span>
+              <span>Editor</span>
+            </div>
+            <span className="char-count num text-dim">{markdown.length} Chars</span>
           </div>
           <textarea
             value={markdown}
             onChange={handleTextareaChange}
-            placeholder="在这里粘贴或编辑你的markdown内容..."
+            placeholder="Paste or write your markdown here..."
             className="editor"
           />
         </div>
         
-        <div className="preview-panel">
+        <div className="panel preview-panel glass rise" style={{ animationDelay: '0.2s' }}>
           <div className="panel-header">
-            <h3>👁️ 实时预览</h3>
+            <div className="panel-title">
+              <span>👁️</span>
+              <span>Preview</span>
+            </div>
             <div className="export-actions">
-              <button onClick={handleCopy} className="copy-button">
-                📋 复制内容
+              <button onClick={handleCopy} className="action-btn">
+                <span>📋</span> Copy
               </button>
-              <button onClick={handleExportWord} className="copy-button word-button">
-                💾 导出 DOCX
+              <button onClick={handleExportWord} className="action-btn">
+                <span>💾</span> DOCX
               </button>
-              <button onClick={handleExportPdf} className="copy-button pdf-button">
-                📄 导出 PDF
+              <button onClick={handleExportPdf} className="action-btn">
+                <span>📄</span> PDF
               </button>
-              <button onClick={handleExportHtml} className="copy-button html-button">
-                🌐 导出 HTML
+              <button onClick={handleExportHtml} className="action-btn">
+                <span>🌐</span> HTML
               </button>
             </div>
           </div>

@@ -1,4 +1,38 @@
-/* 全局样式重置 */
+/* Komari Theme CSS Variables */
+:root {
+  font-family: "Inter", "MiSans", "HarmonyOS Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+}
+
+html, html[data-mode="day"] {
+  color-scheme: light;
+  --text: #262c4a;
+  --text-dim: rgba(38, 44, 74, 0.6);
+  --glass: rgba(255, 255, 255, 0.6);
+  --glass-strong: rgba(255, 255, 255, 0.94);
+  --glass-border: rgba(255, 255, 255, 0.8);
+  --glass-shadow: 0 8px 32px rgba(80, 70, 130, 0.14);
+  --track: rgba(38, 44, 74, 0.1);
+  --chip: rgba(255, 255, 255, 0.55);
+  --accent: #7c6cf0;
+  --veil: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.12));
+  --bg-color: #f6f8fa;
+}
+
+html[data-mode="night"] {
+  color-scheme: dark;
+  --text: #e9ecff;
+  --text-dim: rgba(233, 236, 255, 0.58);
+  --glass: rgba(13, 16, 36, 0.52);
+  --glass-strong: rgba(15, 19, 42, 0.93);
+  --glass-border: rgba(255, 255, 255, 0.13);
+  --glass-shadow: 0 8px 32px rgba(2, 4, 16, 0.5);
+  --track: rgba(233, 236, 255, 0.12);
+  --chip: rgba(255, 255, 255, 0.08);
+  --accent: #9d8cff;
+  --veil: linear-gradient(180deg, rgba(5, 7, 22, 0.15), rgba(5, 7, 22, 0.35));
+  --bg-color: #0f1225;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -6,140 +40,161 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  background-color: #f1f5f9;
-  line-height: 1.6;
+  margin: 0;
+  color: var(--text);
+  background-color: var(--bg-color);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(124, 108, 240, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(52, 211, 153, 0.15) 0px, transparent 50%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background-color 0.5s ease;
+}
+
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-strong {
+  background: var(--glass-strong);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
 .app {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f1f5f9;
+  padding: 1.5rem;
+  gap: 1.5rem;
 }
 
-/* 头部样式 */
 .header {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  color: white;
-  padding: 1rem 2rem;
-  text-align: center;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 2rem;
+  border-radius: 24px;
 }
 
-.header h1 {
-  font-size: 1.8rem;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
+.header-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  background: linear-gradient(135deg, var(--text), var(--accent));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.header p {
-  opacity: 0.9;
+.header-content p {
   font-size: 0.9rem;
+  color: var(--text-dim);
 }
 
-/* 主容器 */
+.mode-toggle {
+  background: var(--chip);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.2rem;
+}
+
+.mode-toggle:hover {
+  transform: scale(1.1);
+  background: var(--accent);
+  color: white;
+}
+
 .container {
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 1.5rem;
   min-height: 0;
 }
 
-/* 面板通用样式 */
-.editor-panel,
-.preview-panel {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+.panel {
+  border-radius: 24px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
 }
 
-/* 面板头部 */
+.panel:hover {
+  transform: translateY(-4px);
+}
+
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+  padding: 1rem 1.5rem;
+  background: var(--chip);
+  border-bottom: 1px solid var(--glass-border);
 }
 
-.panel-header h3 {
-  font-size: 1.1rem;
-  color: #495057;
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 600;
-}
-
-.char-count {
-  color: #6c757d;
-  font-size: 0.85rem;
+  font-size: 1rem;
 }
 
 .export-actions {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
-/* 编辑器样式 */
+.action-btn {
+  background: var(--chip);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.action-btn:hover {
+  background: var(--accent);
+  color: white;
+  transform: translateY(-1px);
+}
+
 .editor {
   flex: 1;
+  background: transparent;
   border: none;
   padding: 1.5rem;
   font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
+  color: var(--text);
   resize: none;
   outline: none;
-  background: #ffffff;
-  color: #333;
 }
 
-.editor:focus {
-  background: #fefefe;
-}
-
-/* 复制按钮样式 */
-.copy-button {
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.copy-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
-}
-
-.copy-button:active {
-  transform: translateY(0);
-}
-
-.word-button {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-}
-
-.pdf-button {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-}
-
-.html-button {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-}
-
-/* 预览区域样式 - 模拟Word文档效果 */
 .preview {
   flex: 1;
   padding: 2rem;
@@ -148,14 +203,12 @@ body {
   font-family: 'Times New Roman', serif;
   font-size: 16px;
   line-height: 1.6;
-  color: #333;
-  
-  /* Word文档样式 */
-  max-width: none;
-  border: none;
+  color: #000;
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
 }
 
-/* Markdown内容样式 */
+/* 预览样式保持原样，以适应Word */
 .preview h1 {
   font-size: 2rem;
   font-weight: bold;
@@ -164,99 +217,45 @@ body {
   border-bottom: 2px solid #3498db;
   padding-bottom: 0.5rem;
 }
-
 .preview h2 {
   font-size: 1.5rem;
   font-weight: bold;
   margin: 1.2rem 0 0.8rem 0;
   color: #34495e;
 }
-
-.preview h3 {
-  font-size: 1.3rem;
-  font-weight: bold;
-  margin: 1rem 0 0.6rem 0;
+.preview h3, .preview h4, .preview h5, .preview h6 {
   color: #34495e;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
 }
-
-.preview h4,
-.preview h5,
-.preview h6 {
-  font-weight: bold;
-  margin: 0.8rem 0 0.4rem 0;
-  color: #34495e;
-}
-
-.preview p {
-  margin-bottom: 1rem;
-  text-align: justify;
-}
-
-/* 强调文本 */
-.preview strong {
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-.preview em {
-  font-style: italic;
-}
-
-/* 列表样式 */
-.preview ul,
-.preview ol {
-  margin: 1rem 0;
-  padding-left: 2rem;
-}
-
-.preview li {
-  margin-bottom: 0.3rem;
-}
-
-/* 代码样式 - Word兼容优化 */
+.preview p { margin-bottom: 1rem; text-align: justify; }
+.preview ul, .preview ol { margin: 1rem 0; padding-left: 2rem; }
 .preview code {
   background-color: #f0f0f0;
   padding: 2px 4px;
-  font-family: 'Courier New', monospace; /* Word兼容字体 */
-  font-size: 10pt; /* 使用pt单位，Word更兼容 */
-  color: #000000;
-  border: 1px solid #cccccc;
-  /* 添加Word兼容的样式 */
+  font-family: 'Courier New', monospace;
+  font-size: 10pt;
+  color: #000;
+  border: 1px solid #ccc;
   word-wrap: break-word;
   white-space: pre-wrap;
   margin: 0 2px;
 }
-
 .preview pre {
   background-color: #f0f0f0;
-  border: 1px solid #cccccc;
+  border: 1px solid #ccc;
   padding: 8px;
   margin: 10pt 0;
-  font-family: 'Courier New', monospace; /* Word兼容字体 */
-  font-size: 10pt; /* 使用pt单位 */
+  font-family: 'Courier New', monospace;
+  font-size: 10pt;
   line-height: 1.2;
-  color: #000000;
-  /* Word兼容优化 */
+  color: #000;
   page-break-inside: avoid;
   word-wrap: break-word;
   white-space: pre-wrap;
-  /* 确保在Word中显示 */
   display: block;
-  clear: both;
 }
-
-.preview pre code {
-  background: transparent;
-  padding: 0;
-  color: inherit;
-  border: none;
-  font-size: inherit;
-  font-family: inherit;
-  /* 确保行内代码在Word中正确显示 */
-  display: inline;
-}
-
-/* 引用样式 */
+.preview pre code { border: none; background: transparent; padding: 0; }
 .preview blockquote {
   border-left: 4px solid #3498db;
   margin: 1rem 0;
@@ -265,49 +264,27 @@ body {
   font-style: italic;
   color: #555;
 }
-
-/* 分隔线 */
-.preview hr {
-  border: none;
-  height: 2px;
-  background: linear-gradient(to right, #3498db, #e74c3c);
-  margin: 2rem 0;
-  border-radius: 1px;
-}
-
-/* 表格样式已在组件中定义 */
-
-/* 链接样式 */
-.preview a {
-  color: #3498db;
-  text-decoration: none;
-}
-
-.preview a:hover {
-  text-decoration: underline;
-}
+.preview table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+.preview th, .preview td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+.preview th { background-color: #f2f2f2; }
+.preview img { max-width: 100%; }
 
 /* 数学公式图片样式优化 */
 .preview .math-image {
-  /* 基础样式 */
   border: none;
   background: transparent;
   box-shadow: none;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
 }
-
-/* 行内数学公式图片优化 */
 .preview .math-image:not([style*="display: block"]) {
-  /* 行内公式特殊优化 */
   margin: 0 0.05em;
   padding: 0;
   border-radius: 2px;
-  /* 确保不影响文本行高 */
   line-height: inherit;
 }
-
-/* 块级数学公式图片优化 */
 .preview .math-image[style*="display: block"] {
-  /* 块级公式居中显示 */
   margin: 1.2em auto;
   padding: 0.5em;
   background: rgba(248, 249, 250, 0.5);
@@ -315,73 +292,19 @@ body {
   border: 1px solid #e9ecef;
 }
 
-/* 防止数学图片在复制时出现问题 */
-.preview .math-image {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  pointer-events: none;
-}
-
-/* 数学公式区域的特殊样式 */
-.preview p:has(.math-image),
-.preview li:has(.math-image) {
-  line-height: 1.6;
-}
-
-/* 响应式设计 - 小屏幕上的数学公式 */
-@media (max-width: 768px) {
-  .preview .math-image[style*="display: block"] {
-    max-width: 95%;
-    margin: 0.8em auto;
-  }
-
-  .preview .math-image:not([style*="display: block"]) {
-    max-height: 1em;
-    transform: translateY(0.02em);
-  }
-}
-
-/* 响应式设计 */
 @media (max-width: 768px) {
   .container {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr 1fr;
   }
-  
-  .header {
-    padding: 1rem;
-  }
-  
-  .header h1 {
-    font-size: 1.5rem;
-  }
-  
-  .preview {
-    padding: 1rem;
-  }
 }
 
-/* 滚动条样式 */
-.preview::-webkit-scrollbar,
-.editor::-webkit-scrollbar {
-  width: 8px;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(124, 108, 240, 0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-.preview::-webkit-scrollbar-track,
-.editor::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.preview::-webkit-scrollbar-thumb,
-.editor::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-.preview::-webkit-scrollbar-thumb:hover,
-.editor::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
+/* Animations */
+@keyframes fadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.fadein { animation: fadein 0.4s ease both; }
