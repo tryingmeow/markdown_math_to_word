@@ -612,13 +612,13 @@ ${previewRef.current.innerHTML}
       
       <header className="header glass-strong rise">
         <div className="header-content">
-          <h1>📝 Markdown to Word</h1>
-          <p>Real-time Preview | LaTeX Math | Rich Formats</p>
+          <h1>📝 Markdown转Word工具</h1>
+          <p>实时预览 | LaTeX公式 | 格式丰富</p>
         </div>
         <div 
           className="mode-toggle" 
           onClick={() => setIsNight(!isNight)}
-          title="Toggle Theme"
+          title="切换主题"
         >
           {isNight ? '🌙' : '☀️'}
         </div>
@@ -629,14 +629,14 @@ ${previewRef.current.innerHTML}
           <div className="panel-header">
             <div className="panel-title">
               <span>📝</span>
-              <span>Editor</span>
+              <span>编辑器</span>
             </div>
-            <span className="char-count num text-dim">{markdown.length} Chars</span>
+            <span className="char-count num text-dim">{markdown.length} 字符</span>
           </div>
           <textarea
             value={markdown}
             onChange={handleTextareaChange}
-            placeholder="Paste or write your markdown here..."
+            placeholder="在这里粘贴或编辑你的markdown内容..."
             className="editor"
           />
         </div>
@@ -645,20 +645,20 @@ ${previewRef.current.innerHTML}
           <div className="panel-header">
             <div className="panel-title">
               <span>👁️</span>
-              <span>Preview</span>
+              <span>实时预览</span>
             </div>
             <div className="export-actions">
               <button onClick={handleCopy} className="action-btn">
-                <span>📋</span> Copy
+                <span>📋</span> 复制
               </button>
               <button onClick={handleExportWord} className="action-btn">
-                <span>💾</span> DOCX
+                <span>💾</span> 导出 DOCX
               </button>
               <button onClick={handleExportPdf} className="action-btn">
-                <span>📄</span> PDF
+                <span>📄</span> 导出 PDF
               </button>
               <button onClick={handleExportHtml} className="action-btn">
-                <span>🌐</span> HTML
+                <span>🌐</span> 导出 HTML
               </button>
             </div>
           </div>
