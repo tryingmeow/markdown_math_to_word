@@ -198,12 +198,12 @@ body {
 .preview {
   flex: 1;
   padding: 2rem;
-  background: #ffffff;
+  background: transparent;
   overflow-y: auto;
   font-family: 'Times New Roman', serif;
   font-size: 16px;
   line-height: 1.6;
-  color: #000;
+  color: var(--text);
   border-bottom-left-radius: 24px;
   border-bottom-right-radius: 24px;
 }
@@ -213,18 +213,18 @@ body {
   font-size: 2rem;
   font-weight: bold;
   margin: 1.5rem 0 1rem 0;
-  color: #2c3e50;
-  border-bottom: 2px solid #3498db;
+  color: var(--text);
+  border-bottom: 2px solid var(--accent);
   padding-bottom: 0.5rem;
 }
 .preview h2 {
   font-size: 1.5rem;
   font-weight: bold;
   margin: 1.2rem 0 0.8rem 0;
-  color: #34495e;
+  color: var(--text);
 }
 .preview h3, .preview h4, .preview h5, .preview h6 {
-  color: #34495e;
+  color: var(--text);
   margin-top: 1rem;
   margin-bottom: 0.5rem;
 }
